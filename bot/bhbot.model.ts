@@ -1,6 +1,6 @@
 import { Chat } from "@telegraf/types";
 
 export interface BotConfig {
-    subscribers: Chat[],
+    subscribers: number[],
     messageQueue: string[];
 }

@@ -1,5 +1,6 @@
+import { Subject } from "rxjs";
 import { DataBaseService } from "../sql/sql";
-import { EventDispatcherConfig } from "./config";
+import { BotEvent, EventDispatcherConfig } from "./config";
 
 export class EventDispatcher {
   constructor(
@@ -7,13 +8,18 @@ export class EventDispatcher {
     private config: EventDispatcherConfig
   ) {
     this.#init();
+    this.active = true;
   }
 
+  portion$ = new Subject<BotEvent[]>();
+  portion: number = this.config.portion ?? 20;
+  activeQueue: BotEvent[] = [];
   active = false;
 
   #init(): void {
     setInterval(() => {
-      this.refreshActionList();
+      if (this.active && this.activeQueue.length <= this.portion)
+        this.refreshActionList();
     }, this.config.timeout ?? 30000);
   }
 
@@ -26,7 +32,29 @@ export class EventDispatcher {
   }
 
   async refreshActionList() {
-    const q = `SELECT * FROM ${this.config.dbTableName} WHERE status = 'pending' LIMIT ${this.config.portion ?? 20}`;
-    const actionList = await this.db.queryList(q).toPromise();
+    const markQ = `UPDATE ${this.config.dbTableName} 
+      SET status= "sending" 
+      WHERE id IN 
+      (SELECT id FROM ${
+        this.config.dbTableName
+      } WHERE status IN('pending', 'reply', 'sending') LIMIT ${
+      this.portion ?? 20
+    })`;
+    console.log("markQ: ", markQ);
+    await this.db.query(markQ).toPromise();
+    const q = `SELECT * FROM ${
+      this.config.dbTableName
+    } WHERE status IN('sending') LIMIT ${this.portion ?? 20}`;
+    console.log("q: ", q);
+
+    const actionList = await this.db.queryList<BotEvent>(q).toPromise();
+    console.log("actionList:", actionList);
+    this.activeQueue.push(...actionList);
+
+
+  }
+
+  connect () {
+    return this.portion$.asObservable(); 
   }
 }
