@@ -121,17 +121,20 @@ export class BHBot {
       //@ts-ignore
       const data = ctx.callbackQuery?.data;
 
-      switch (data) {
-        case "/subscribe":
-          this.subscribe(ctx);
-          break;
-        case "/unsubscribe":
-          this.unsubscribe(ctx);
-          break;
-        default:
-      }
-      ctx.answerCbQuery("ok");
-      console.log("callback_query", JSON.stringify(data, null, 2));
+      ctx.answerCbQuery("Обработка запроса");
+
+      setImmediate(() => {
+        switch (data) {
+          case "/subscribe":
+            this.subscribe(ctx);
+            break;
+          case "/unsubscribe":
+            this.unsubscribe(ctx);
+            break;
+          default:
+        }
+      });
+      console.log("callback_query", JSON.stringify(ctx, null, 2));
     });
 
     this.bot.on("message", (ctx) => {
